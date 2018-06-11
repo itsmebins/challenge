@@ -1,0 +1,7 @@
+{
+  "TEST_API_URLS" : {
+    "API_BASE" : "/domainname",
+    "API_BASE_STATUS" : "/status",
+    "API_USER_REGISTER" :"/api/user/register"
+  }
+}

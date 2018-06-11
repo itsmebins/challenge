@@ -1,0 +1,27 @@
+[
+  {
+    "name": "India",
+    "code": "IN",
+    "id": 1
+  },
+  {
+    "name": "United States of America",
+    "code": "US",
+    "id": 2
+  },
+  {
+    "name": "Australia",
+    "code": "AU",
+    "id": 3
+  },
+  {
+    "name": "UAE",
+    "code": "AE",
+    "id": 4
+  },
+  {
+    "name": "QATAR",
+    "code": "QA",
+    "id": 5
+  }
+]
