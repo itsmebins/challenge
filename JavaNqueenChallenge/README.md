@@ -12,7 +12,7 @@ I have implemented 2 algorithms
 
      gradle run -PappArgs="[4]"
 
-# Testings
+# Testing
 
     ./gradlew test jacocoFullReport
     open build/reports/jacoco/jacocoFullReport/html/index.html
