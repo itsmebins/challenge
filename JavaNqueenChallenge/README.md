@@ -4,13 +4,9 @@
 
 I have implemented 2 algorithms
 
-1. Linear search method --> linear search one way direction
-2. L shape method -->  we find only available options in each iteration
+1. Linear search method --> Traditional logic, fix one one side row or column and iterate till we find solution, we cannot give a starting position here..
+2. L shape method -->  Here I find only available options, then pass this options to next iteration, then continue the same logic using backtracking. We can pass a point to this and find the solution exist in that position.
 	 	
-- Queen position is encoded as a 2d array, with `[row][col] = 1` indicating a queen. We could use a different scheme, ie,
-  `[0 ... col]` were the index is the row and the value is the column.
-- There are lots of different solutions, including a closed form (at least for NQueens only). 
-
 
 # Running
 
