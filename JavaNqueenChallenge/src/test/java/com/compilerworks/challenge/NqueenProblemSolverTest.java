@@ -52,26 +52,26 @@ public class NqueenProblemSolverTest {
     }
     
     @Test
-    public void testSolutionDoesntExistFor4x4IterationLogic() throws Exception {
+    public void testSolutionExistFor4x4IterationLogic() throws Exception {
     	 NqueenProblemSolver challenge = new NqueenProblemSolver(4, 0);// size and type = iteration
     	 assertTrue("4x4 board should have a solution", challenge.hasSolution());
     }
     
     @Test
-    public void testSolutionDoesntExistFor4x4DiagonalLogic() throws Exception {
+    public void testSolutionExistFor4x4DiagonalLogic() throws Exception {
     	 NqueenProblemSolver challenge = new NqueenProblemSolver(4, 1);// size and type = diagonal
     	 assertTrue("4x4 board should have a solution", challenge.hasSolution());
     }
     
     
     @Test
-    public void testSolutionDoesntExistFor10x10IterationLogic() throws Exception {
+    public void testSolutionExistFor10x10IterationLogic() throws Exception {
     	 NqueenProblemSolver challenge = new NqueenProblemSolver(10, 0);// size and type = iteration
     	 assertTrue("10X10 board should have a solution", challenge.hasSolution());
     }
     
     @Test
-    public void testSolutionDoesntExistFor10X10DiagonalLogic() throws Exception {
+    public void testSolutionExistFor10X10DiagonalLogic() throws Exception {
     	 NqueenProblemSolver challenge = new NqueenProblemSolver(10, 1);// size and type = diagonal
     	 assertTrue("10x10 board should have a solution", challenge.hasSolution());
     }
