@@ -1,14 +1,8 @@
 import React, { Component } from 'react';
 import { FormattedMessage, injectIntl } from 'react-intl';
 import HomeHeader from '../../components/Home/HomeHeader.js';
-import {
-  saveToLocalStorage,
-  loadFromLocalStorage
-} from '../../localStorage.js';
-import { join } from 'path';
 
-const NO_OF_BOARDS = 20;
-
+const NO_OF_BOARDS = 30;
 class QueenGame extends Component {
   constructor(props) {
     super(props);
@@ -18,22 +12,43 @@ class QueenGame extends Component {
       board: this.initializeBoard(4),
       isGameOver: true,
       gameInProgress: false,
-      msg: 'Please click start button to run this program'
+      msg: 'Please click start button to run this program',
+      tableKey: Date.now(),
+      queenThreeLine: false
     };
     this.findQueenPositionUsingDiagonalAlgorithm = this.findQueenPositionUsingDiagonalAlgorithm.bind(
       this
     );
+    this.findQueeenPositions = this.findQueeenPositions.bind(this);
+    this.applyBoardChanges = this.applyBoardChanges.bind(this);
   }
 
-  async startGame() {
-    this.setState({ gameInProgress: true });
+  findQueeenPositions() {
+    setTimeout(_ => this.setState({ gameInProgress: true }), 1000 * 0.01);
+    // this.setState({ gameInProgress: true });
+    setTimeout(_ => this.startGame(), 1000 * 0.03);
+  }
+
+  angle = (anchor, point) =>
+    Math.atan2(anchor.y - point.y, anchor.x - point.x) * 180 / Math.PI + 180;
+
+  handleThreeLineQueenCheck = ev => {
+    this.setState({ queenThreeLine: ev.target.checked });
+  };
+
+  applyBoardChanges(board) {
+    this.setState({ board, tableKey: Date.now() });
+    //this.forceUpdate();
+  }
+
+  startGame() {
     let hasSolution = false;
     for (let i = 0; i < this.state.boardSize; i++) {
       // reinitialize the array as we want to try with next row position freshly...
       let board = this.initializeBoard(this.state.boardSize);
       board[i][0] = 1;
-     this.queens =[{row:i, column: 0}] 
-      const foundSolution = await this.findQueenPositionUsingDiagonalAlgorithm(
+      this.queens = [{ row: i, column: 0 }];
+      const foundSolution = this.findQueenPositionUsingDiagonalAlgorithm(
         board,
         i,
         1
@@ -41,7 +56,11 @@ class QueenGame extends Component {
       if (foundSolution) {
         console.log('Solution Exist with row position = ' + i);
         hasSolution = true;
-        this.setState({ gameInProgress: false, board, msg: 'We found first workiing set,please check the result..' });
+        this.setState({
+          gameInProgress: false,
+          board,
+          msg: 'We found first workiing set,please check the result..'
+        });
         break;
       }
     }
@@ -50,31 +69,35 @@ class QueenGame extends Component {
       console.log(
         'Solution does not exist with this size = ' + this.state.boardSize
       );
-      this.setState({ gameInProgress: false, msg: 'We could not find the solution with this size, please try again' });
+      this.setState({
+        board: this.initializeBoard(this.state.boardSize),
+        gameInProgress: false,
+        msg: 'We could not find the solution with this size, please try again'
+      });
     }
   }
 
-  async findQueenPositionUsingDiagonalAlgorithm(board, rowRef, colRef) {
+  findQueenPositionUsingDiagonalAlgorithm(board, rowRef, colRef) {
     try {
       /*  algorithm
-			 * 
-			 *  1. Keep queen in one initial position.
-			 *  
-			 *  2. Set that initial queen row as base and do iterations after finding the element which are available for next safe location..
-			 *  
-			 *  3. find the next position using diagonal algorithm
-			 *  
-			 *   initilal position: 00, then next position would be row = (row+2, row+3, etc or row-2, row -3, etc, column = column +1, then set new position as new base and continue till we reach a solution or 
-			 *  no slution criteria. 
-			 *  
-			 *  
-			 *  
-			 *  
-			/*
-			 * If all queens are placed then return true
-			 */
+       * 
+       *  1. Keep queen in one initial position.
+       *  
+       *  2. Set that initial queen row as base and do iterations after finding the element which are available for next safe location..
+       *  
+       *  3. find the next position using diagonal algorithm
+       *  
+       *   initilal position: 00, then next position would be row = (row+2, row+3, etc or row-2, row -3, etc, column = column +1, then set new position as new base and continue till we reach a solution or 
+       *  no slution criteria. 
+       *  
+       *  
+       *  
+       *  
+      /*
+       * If all queens are placed then return true
+       */
       if (colRef >= this.state.boardSize) {
-        return Promise.resolve(true);
+        return true;
         //return true;
       }
 
@@ -96,16 +119,16 @@ class QueenGame extends Component {
         tempRowRef++;
       }
 
-      console.log('**** nextAvailable rows = ' + avaialbleRows);
+      //  console.log('**** nextAvailable rows = ' + avaialbleRows);
       for (let i = 0; i < avaialbleRows.length; i++) {
         let rowPosition = avaialbleRows[i];
-        const itemSatify = await this.isItemSatisfyProgramRule(
+        const itemSatify = this.isItemSatisfyProgramRule(
           board,
           colRef,
           rowPosition
         );
         if (itemSatify) {
-          console.log(
+          /* console.log(
             '**** this position is safe, continue to next backtrack = ' +
               '[' +
               rowPosition +
@@ -113,19 +136,33 @@ class QueenGame extends Component {
               '[' +
               colRef +
               ']'
-          );
+          ); */
           // continue backtracking, after setting safe position...
           board[rowPosition][colRef] = 1;
-
-          this.queens = [...this.queens, {row: rowPosition, column:colRef}];
+          try {
+            document
+              .getElementById(`cell_${rowPosition}${colRef}`)
+              .classList.remove('emptyWhiteCell');
+            document
+              .getElementById(`cell_${rowPosition}${colRef}`)
+              .classList.add('queenCell');
+            console.log(
+              document.getElementById(`cell_${rowPosition}${colRef}`).classList
+            );
+          } catch (e) {}
+          //this.setState({board, tableKey: Date.now()});
+          //this.applyBoardChanges([...board]);
+          //setTimeout(_ => this.setState({board, tableKey: Date.now()}), 1000 * 1);
+          // setTimeout(_ => this.applyBoardChanges([...board]), 1000 * 1);
+          this.queens = [...this.queens, { row: rowPosition, column: colRef }];
           // queenPositions.add(new QueenPosition(avaialbleRows.get(i), colRef));
-          const nextIteration = await this.findQueenPositionUsingDiagonalAlgorithm(
+          const nextIteration = this.findQueenPositionUsingDiagonalAlgorithm(
             board,
             rowPosition,
             colRef + 1
           );
           if (nextIteration) {
-            console.log(
+            /* console.log(
               '**** this position is safe return true= ' +
                 '[' +
                 rowPosition +
@@ -133,11 +170,11 @@ class QueenGame extends Component {
                 '[' +
                 colRef +
                 ']'
-            );
+            ); */
             // printBoard(board);
-            return Promise.resolve(true);
+            return true;
           } else {
-            console.log(
+            /* console.log(
               '**** this position is not safe reset board = ' +
                 '[' +
                 rowPosition +
@@ -145,20 +182,30 @@ class QueenGame extends Component {
                 '[' +
                 colRef +
                 ']'
-            );
+            ); */
             board[rowPosition][colRef] = 0;
-            const removedQueens = this.queens.filter(
-              queen => {
-                return (queen.row !== rowPosition && queen.column !== colRef)
-              });
-              this.queens = [...removedQueens];
-            //	queenPositions.remove(new QueenPosition(avaialbleRows.get(i), colRef));
+            try {
+              document
+                .getElementById(`cell_${rowPosition}${colRef}`)
+                .classList.remove('queenCell');
+              document
+                .getElementById(`cell_${rowPosition}${colRef}`)
+                .classList.add('emptyWhiteCell');
+            } catch (e) {}
+            // this.setState({board, tableKey: Date.now()});
+            // setTimeout(_ => this.setState({board, tableKey: Date.now()}),
+            //1000 * 3);
+            const removedQueens = this.queens.filter(queen => {
+              return queen.row !== rowPosition && queen.column !== colRef;
+            });
+            this.queens = [...removedQueens];
+            //  queenPositions.remove(new QueenPosition(avaialbleRows.get(i), colRef));
             //printBoard(board);
           }
         }
       }
       // no postion is fit in the column... so change the row sequence...
-      return Promise.resolve(false);
+      return false;
     } catch (e) {
       console.log('**** Error : findQueenPosition = ');
       console.log(e);
@@ -172,7 +219,7 @@ class QueenGame extends Component {
    * @return
    * @throws Exception
    */
-  async isItemSatisfyProgramRule(board, colPos, rowPos) {
+  isItemSatisfyProgramRule(board, colPos, rowPos) {
     try {
       /*
      * rule no: 1--> only one queen in the row..
@@ -181,15 +228,15 @@ class QueenGame extends Component {
      */
       for (let i = 0; i < this.state.boardSize; i++) {
         if (board[i][colPos] === 1 || board[rowPos][i] === 1) {
-          console.log(
+          /*console.log(
             '**** failed position  : row = ' +
               rowPos +
               ' , column = ' +
               colPos +
               ' , position =  ' +
               i
-          );
-          return Promise.resolve(false);
+          ); */
+          return false;
         }
       }
 
@@ -197,7 +244,7 @@ class QueenGame extends Component {
       let i, j;
       for (let i = rowPos, j = colPos; i >= 0 && j >= 0; i--, j--) {
         if (board[i][j] === 1) {
-          return Promise.resolve(false);
+          return false;
         }
       }
 
@@ -208,7 +255,7 @@ class QueenGame extends Component {
         i++, j--
       ) {
         if (board[i][j] === 1) {
-          return Promise.resolve(false);
+          return false;
         }
       }
 
@@ -219,11 +266,14 @@ class QueenGame extends Component {
      *  
      */
 
-     // if(this.isPosSharedSameSlopeWithOtherPoints(rowPos, colPos)) {
-      // // return Promise.resolve(false);
-      // }
+      if (
+        this.state.queenThreeLine === true &&
+        this.isPosSharedSameSlopeWithOtherPoints(rowPos, colPos)
+      ) {
+        return false;
+      }
 
-      return Promise.resolve(true);
+      return true;
     } catch (e) {
       console.error('**** Error : isItemSatisfyProgramRule = ');
     }
@@ -232,30 +282,38 @@ class QueenGame extends Component {
   isPosSharedSameSlopeWithOtherPoints(row, col) {
     if (this.queens.length < 2) {
       return false;
-  }
+    }
 
-  let slopes  = new Set();
-  console.log('queens')
-  console.log(this.queens)
-  for (let i=0;i <  this.queens.length ; i++) {
-    let slope =(this.queens[i].row - row === 0) ? Number.MAX_VALUE: 
-  0.0 + parseFloat((this.queens[i].column - col) / (this.queens[i].row - row));
-    //System.out.println("**** Slope, point = "+ queenPos.toString() + " and poition [" + row + "]["+ col + "]");
-    
-   // System.out.println("**** slopes values = "+ slopes);
-    
+    let slopes = new Set();
+    //console.log('queens')
+    //console.log(this.queens)
+    for (let i = 0; i < this.queens.length; i++) {
+      const x = this.queens[i].row;
+      const y = this.queens[i].column;
+      let slope =
+        x - row === 0
+          ? Number.MAX_VALUE
+          : this.angle({ x, y }, { x: row, y: col });
+      // let slope =(this.queens[i].row - row === 0) ? Number.MAX_VALUE:
+      // 0.0 + parseFloat((this.queens[i].column - col) / (this.queens[i].row - row));
+      //System.out.println("**** Slope, point = "+ queenPos.toString() + " and poition [" + row + "]["+ col + "]");
+
+      // System.out.println("**** slopes values = "+ slopes);
+
       //Double slope = (queenPos.row - row) == 0
-           //   ? Integer.MAX_VALUE
-            //  : Double.valueOf((double) (queenPos.column - col) / (double) (queenPos.row - row));
-            console.log('slopes')
-            console.log(slopes);
+      //   ? Integer.MAX_VALUE
+      //  : Double.valueOf((double) (queenPos.column - col) / (double) (queenPos.row - row));
+      //console.log('slopes')
+      // console.log(slopes);
       if (slopes.has(slope)) {
-        //System.err.println("**** 3 points same line : Slope, point = "+ queenPos.toString() + " and poition [" + row + "]["+ col + "]");
-          return true;
+        //console.log('slope ****')
+        //console.log(slope);
+        // console.log("**** 3 points = "+ x+", "+ y + " and poition [" + row + "]["+ col + "]");
+        return true;
       }
       slopes.add(slope);
-  }
-  return false; 
+    }
+    return false;
   }
 
   resetGame() {
@@ -285,24 +343,27 @@ class QueenGame extends Component {
   renderQueenBoard() {
     let rows = [];
     let cellCount = 0;
-    const size = Math.floor(100 / this.state.boardSize);
-    for (let i = 0; i < this.state.boardSize; i++) {
+    //console.log("board");
+    //console.log(this.state.board);
+    const boardLocal = this.state.board;
+    const count = this.state.boardSize;
+    const size = Math.floor(400 / count);
+    for (let i = 0; i < count; i++) {
       let columns = [];
-      for (let j = 0; j < this.state.boardSize; j++) {
-        ////console.log(this.getRandomFillValue());
-        let color = cellCount % 2 === 0 ? 'white' : 'white';
+      for (let j = 0; j < count; j++) {
         columns.push(
           <td
             key={`${i}${j}`}
+            id={`cell_${i}${j}`}
             style={{
-              backgroundColor: color,
               width: `${size}px`,
               height: `${size}px`
             }}
+            className={boardLocal[i][j] === 1 ? 'queenCell' : 'emptyWhiteCell'}
           >
             <div style={{ alignItems: 'center' }}>
               <span>
-                {this.state.board[i][j] === 1 ? (
+                {boardLocal[i][j] === 1 ? (
                   <i className="fa fa-check" />
                 ) : (
                   <i className="fa fa-ban" />
@@ -321,7 +382,11 @@ class QueenGame extends Component {
     }
 
     return (
-      <table className="table table-bordered">
+      <table
+        className="table table-bordered "
+        style={{ width: '400', height: '400' }}
+        key={this.state.tableKey}
+      >
         <tbody>{rows}</tbody>
       </table>
     );
@@ -357,10 +422,7 @@ class QueenGame extends Component {
   renderStartBtn() {
     if (this.state.gameInProgress === true) {
       return (
-        <button
-          type="button"
-          className="btn btn-info"
-        >
+        <button type="button" className="btn btn-info">
           Please wait...
         </button>
       );
@@ -370,39 +432,12 @@ class QueenGame extends Component {
         type="button"
         className="btn btn-primary"
         onClick={() => {
-          this.startGame();
+          this.findQueeenPositions();
         }}
       >
         Start
       </button>
     );
-  }
-
-  renderCoffeeTable(colorRowNo, colorLessRowNo) {
-    let colorRows = [];
-    for (let i = 0; i < colorRowNo; i++) {
-      ////console.log(this.getRandomFillValue());
-      colorRows.push(
-        <div id={i} key={i} className="circle circle-outer-border animated">
-          <div />
-        </div>
-      );
-    }
-    let colorLessRows = [];
-    for (let i = 0; i < colorLessRowNo; i++) {
-      //console.log(this.getRandomFillValue());
-      colorLessRows.push(
-        <div
-          id={colorRowNo + 1 + i}
-          key={colorRowNo + 1 + i}
-          className="circle circle-outer-border animated"
-        >
-          <div />
-        </div>
-      );
-    }
-
-    return colorLessRows.concat(colorRows);
   }
 
   applyAnimationToRow(ev, elementName, startValue, endValue) {
@@ -421,10 +456,10 @@ class QueenGame extends Component {
 
   render() {
     let msg = this.state.msg;
-    if(this.state.gameInProgress) {
+    if (this.state.gameInProgress) {
       msg = 'Please wait program is running';
     }
-    
+
     return (
       <div className="app">
         <HomeHeader />
@@ -458,15 +493,20 @@ class QueenGame extends Component {
                 <div className="col-sm-3">{this.renderStartBtn()}</div>
               </div>
               <hr />
+              <div className="form-group row" />
               <div className="form-group row">
-                <label className="col-md-2 col-sm-2 form-control-label justify-content-center">
-                  <FormattedMessage id="RESULT" />
-                </label>
-                <label className="col-md-2 col-sm-2 form-control-label">
-                  {msg}
-                </label>
+                <div className="col-sm-4 col-md-4">
+                  <label className="col-md-2 col-sm-2 form-control-label justify-content-center">
+                    <FormattedMessage id="RESULT" />
+                  </label>
+                  <span>{'  '}</span>
+                </div>
+                <div className="col-sm-4 col-md-4">
+                  <label className="form-control-label justify-content-center">
+                    {msg}
+                  </label>
+                </div>
               </div>
-
               <div className="form-group row">
                 <div className="col-sm-4 col-md-4">
                   <button
@@ -480,10 +520,26 @@ class QueenGame extends Component {
                   </button>
                   <span>{'  '}</span>
                 </div>
+                <div className="col-sm-4 col-md-4">
+                  <div className="row">
+                    <input
+                      type="checkbox"
+                      onChange={this.handleThreeLineQueenCheck}
+                      defaultChecked={this.state.queenThreeLine}
+                    />
+                    <label className="cform-control-label justify-content-center">
+                      {
+                        ' Should not show 3 queens in one straight line. Please select lower values if you are selecting this option'
+                      }
+                    </label>
+                  </div>
+                </div>
               </div>
               <hr />
               <div className="col-xl-9 col-md-9 col-sm-9 justify-content-center">
-                <div className="row">{this.renderQueenBoard()}</div>
+                <div className="row justify-content-center">
+                  {this.renderQueenBoard()}
+                </div>
               </div>
             </div>
           </div>
