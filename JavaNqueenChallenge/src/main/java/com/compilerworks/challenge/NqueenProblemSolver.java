@@ -85,6 +85,8 @@ public class NqueenProblemSolver {
 				// reinitialize the array as we want to try with next row position freshly...
 				fillArrayWithZeros(board);
 				board[i][0] = 1;
+				queenPositions.clear();
+				queenPositions.add(new QueenPosition(i, 0));
 				if (findQueenPositionUsingDiagonalAlgorithm(board, i, 1)) {
 					System.out.print("Solution Exist with row position = " + i);
 					setFinalQueenPositions(board);

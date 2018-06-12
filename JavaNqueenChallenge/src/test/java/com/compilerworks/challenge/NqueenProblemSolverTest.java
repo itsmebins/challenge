@@ -63,6 +63,26 @@ public class NqueenProblemSolverTest {
     	 assertTrue("4x4 board should have a solution", challenge.hasSolution());
     }
     
+    /* I am not getting solution with 5, 6 and 7 */
+    
+    @Test
+    public void testSolutionDoesNotExistFor5X5DiagonalLogic() throws Exception {
+    	 NqueenProblemSolver challenge = new NqueenProblemSolver(5, 1);// size and type = diagonal
+    	 assertFalse("5X5 board does not has solution", challenge.hasSolution());
+    }
+    
+    @Test
+    public void testSolutionDoesNotExistFor6X6DiagonalLogic() throws Exception {
+    	 NqueenProblemSolver challenge = new NqueenProblemSolver(6, 1);// size and type = diagonal
+    	 assertFalse("6X6 board does not has solution", challenge.hasSolution());
+    }
+    
+    @Test
+    public void testSolutionDoesNotExistFor7X7DiagonalLogic() throws Exception {
+    	 NqueenProblemSolver challenge = new NqueenProblemSolver(7, 1);// size and type = diagonal
+    	 assertFalse("7X7 board does not has solution", challenge.hasSolution());
+    }
+    
     
     @Test
     public void testSolutionExistFor10x10IterationLogic() throws Exception {
