@@ -54,7 +54,7 @@ public class NqueenProblemSolver {
 
 		if (this.algorithamType == 0) {
 			// Enable this one for base itration logic...
-			if (findQueenPositionUsingIterationLogic(board, 0)) {
+			if (findQueenPositionUsingIterationLogic(board,0, 0)) {
 				System.out.print("Solution  exist");
 				setFinalQueenPositions(board);
 				//printBoard(board);
@@ -81,6 +81,14 @@ public class NqueenProblemSolver {
 			 * 
 			 */
 			boolean hasSolution = false;
+			/* no need this for loop, we can acheive this without for loop 
+			 * 
+			 * 
+			 * just call this method with row=0 , if you do not want for loop...
+			 * findQueenPositionUsingDiagonalAlgorithm(board, 0, 0)
+			 * 
+			 * 
+			 */
 			for (int i = 0; i < arraySize; i++) {
 				// reinitialize the array as we want to try with next row position freshly...
 				fillArrayWithZeros(board);
@@ -253,11 +261,16 @@ public class NqueenProblemSolver {
 	 * @return
 	 * @throws Exception
 	 */
-	private boolean findQueenPositionUsingIterationLogic(int board[][], int column) throws Exception {
+	private boolean findQueenPositionUsingIterationLogic(int board[][], int rowRef, int column) throws Exception {
 		try {
 
 			if (column >= arraySize) {
 				return true;
+			}
+			
+			if(rowRef == 0) {
+				// starting new iteration
+				queenPositions.clear();
 			}
 
 			for (int i = 0; i < arraySize; i++) {
@@ -267,7 +280,7 @@ public class NqueenProblemSolver {
 					// continue backtracking, after setting safe position...
 					board[i][column] = 1;
 					queenPositions.add(new QueenPosition(i, column));
-					if (findQueenPositionUsingIterationLogic(board, column + 1)) {
+					if (findQueenPositionUsingIterationLogic(board, i, column + 1)) {
 						System.err.println(
 								"**** this position is safe return true= " + "[" + i + "]" + "[" + column + "]");
 						printBoard(board);
