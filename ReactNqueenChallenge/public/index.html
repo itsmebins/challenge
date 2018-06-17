@@ -1,67 +1,337 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="LandC - Application for lawyers">
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png">
     <!--
-      Notice the use of %PUBLIC_URL% in the tag above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+         Notice the use of %PUBLIC_URL% in the tag above.
+         It will be replaced with the URL of the `public` folder during the build.
+         Only files inside the `public` folder can be referenced from the HTML.
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
+         Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+         work correctly both with client-side routing and a non-root public URL.
+         Learn how to configure a non-root public URL by running `npm run build`.
+         -->
     <title>My programs</title>
-
     <!-- Icons -->
     <link href="%PUBLIC_URL%/css/font-awesome.min.css" rel="stylesheet">
     <link href="%PUBLIC_URL%/css/simple-line-icons.css" rel="stylesheet">
-
     <!-- Main styles for this application -->
     <link href="%PUBLIC_URL%/css/style.css" rel="stylesheet">
+    <!-- script id="workerCode" type="JavaScript/worker" -->
+    <script id="workerCode"  type="JavaScript/worker">
+        var initializeBoard = function(boardSize) {
+            var rows = [];
 
-   
-<!-- End of Async Drift Code -->
+            for (var i = 0; i < boardSize; i++) {
+                var columns = [];
+                for (var j = 0; j < boardSize; j++) {
+                    columns.push(0);
+                }
+                rows.push(columns);
+            }
+            return rows;
+        };
 
-  </head>
+        var angle = function(anchor, point) {
+            return (
+                Math.atan2(anchor.y - point.y, anchor.x - point.x) * 180 / Math.PI + 180
+            );
+        };
 
-  <!-- BODY options, add following classes to body to change options
+        function _toConsumableArray(arr) {
+            if (Array.isArray(arr)) {
+                for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+                    arr2[i] = arr[i];
+                }
+                return arr2;
+            } else {
+                return Array.from(arr);
+            }
+        }
 
-    // Header options
-    1. '.header-fixed'					- Fixed Header
+        self.onmessage = function(e) {
+            /*  queen solver start*/
+            //console.log("Worker program  running");
+            //console.log(e.data);
+            /*  decalaration for solving this puzzle */
+            var queens = [];
+            var boardSize = e.data && e.data.size ? parseInt(e.data.size, 10) : 0;
+            var hasSolution = false;
+            var isPositionValid = function(row, col) {
+                var slopes = new Set();
+                for (var i = 0; i < queens.length; i++) {
+                    var x = queens[i].row;
+                    var y = queens[i].column;
 
-    // Sidebar options
-    1. '.sidebar-fixed'					- Fixed Sidebar
-    2. '.sidebar-hidden'				- Hidden Sidebar
-    3. '.sidebar-off-canvas'		- Off Canvas Sidebar
-    4. '.sidebar-minimized'			- Minimized Sidebar (Only icons)
-    5. '.sidebar-compact'			  - Compact Sidebar
+                    if(x === row) {
+				        return false;
+			        }
+			
+                    if (Math.abs(x - row ) === Math.abs(y - col)) {
+                        return false;
+                    }
+                    
+                    if (queens && queens.length < 2) {
+                     return true;
+                    }
+                    var slope =
+                        x - row === 0 ?
+                        9999999999 :
+                        angle({
+                            x: x,
+                            y: y
+                        }, {
+                            x: row,
+                            y: col
+                        });
 
-    // Aside options
-    1. '.aside-menu-fixed'			- Fixed Aside Menu
-    2. '.aside-menu-hidden'			- Hidden Aside Menu
-    3. '.aside-menu-off-canvas'	- Off Canvas Aside Menu
+                    if (slopes.has(slope)) {
+                        return false;
+                    }
+                    slopes.add(slope);
+                }
+                return true;
+            };
 
-    // Footer options
-    1. 'footer-fixed'						- Fixed footer
+            var isItemSatisfyProgramRule = function(board, colPos, rowPos) {
+                try {
 
-  -->
+                  //console.log('isItemSatisfyProgramRule');
+                 // console.log(board);
+                 // console.log(boardSize);
+                    for (var _i = 0; _i < boardSize; _i++) {
+                        if (board[_i][colPos] === 1 || board[rowPos][_i] === 1) {
+                            return false;
+                        }
+                    }
 
-  <body class="app header-fixed sidebar-hidden aside-menu-fixed aside-menu-hidden">
+                    /* Check upper diagonal on left side */
+                    var i;
+                    var j;
+                    for (var _i2 = rowPos, _j = colPos; _i2 >= 0 && _j >= 0; _i2--, _j--) {
+                        if (board[_i2][_j] === 1) {
+                            return false;
+                        }
+                    }
+
+                    /* Check lower diagonal on left side */
+                    for (i = rowPos, j = colPos; j >= 0 && i < boardSize; i++, j--) {
+                        if (board[i][j] === 1) {
+                            return false;
+                        }
+                    }
+                    //if(isPosSharedSameSlopeWithOtherPoints(rowPos, colPos)) {
+                     // return false;
+                   // }
+
+                    return true;
+                } catch (e) {
+                    console.error('**** Error : isItemSatisfyProgramRule = ');
+                }
+            };
+
+
+
+            var findQueenPositionUsingDiagonalAlgorithm = function(board, rowRef, colRef) {
+                try {
+                 // console.log('findQueenPositionUsingDiagonalAlgorithm');
+                //  console.log(board);
+                 // console.log(boardSize);
+                    if (colRef >= boardSize) {
+                        return true;
+                        //return true;
+                    }
+
+                    // find the next available rows... then iterate
+
+                    var avaialbleRows = [];
+                    //console.log('**** nextAvailable rows initial = ' + avaialbleRows);
+                    // find upper positions...
+                    var tempRowRef = rowRef - 2;
+                    while (tempRowRef >= 0) {
+                        if(isPositionValid(tempRowRef, colRef)) {
+                            avaialbleRows.push(tempRowRef);
+                        }
+                        tempRowRef--;
+                    }
+
+                    // find lower positions...
+                    tempRowRef = rowRef + 2;
+                    while (tempRowRef < boardSize) {
+                        if(isPositionValid(tempRowRef, colRef)) {
+                            avaialbleRows.push(tempRowRef);
+                        }
+                        tempRowRef++;
+                    }
+
+                   console.log('**** nextAvailable rows = ' + avaialbleRows);
+                    for (var i = 0; i < avaialbleRows.length; i++) {
+                        var rowPosition = avaialbleRows[i];
+                        var itemSatify = true; //isItemSatisfyProgramRule(board, colRef, rowPosition);
+                        if (itemSatify) {
+                            board[rowPosition][colRef] = 1;
+                            //this.queens = [...this.queens, {row: rowPosition, column:colRef}];
+                            var localQueens = _toConsumableArray(queens)
+                            queens = [].concat(localQueens, [{
+                                row: rowPosition,
+                                column: colRef
+                            }]);
+                            postMessage({
+                                size: boardSize,
+                                board: board,
+                                status: 'inProgress'
+                            });
+                            var nextIteration = findQueenPositionUsingDiagonalAlgorithm(
+                                board,
+                                rowPosition,
+                                colRef + 1
+                            );
+                            if (nextIteration) {
+                                return true;
+                            } else {
+                                board[rowPosition][colRef] = 0;
+                                postMessage({
+                                  size: boardSize,
+                                  board: board,
+                                  status: 'inProgress'
+                              });
+                                /*const removedQueens = this.queens.filter(
+                                                          queen => {
+                                                            return (queen.row !== rowPosition && queen.column !== colRef)
+                                                          }); */
+                                var removedQueens = queens.filter(function(queen) {
+                                    return queen.row !== rowPosition && queen.column !== colRef;
+                                });
+                                queens = [].concat(_toConsumableArray(removedQueens));
+                                // this.queens = [...removedQueens];
+                            }
+                        }
+                    }
+                    return false;
+                } catch (e) {
+                    console.log('**** Error : findQueenPosition = ');
+                    console.log(e);
+                }
+            };
+
+            /* end decalaration */
+
+            /* main code */
+            for (var i = 0; i < boardSize; i++) {
+                // reinitialize the array as we want to try with next row position freshly...
+                var board = initializeBoard(boardSize);
+                board[i][0] = 1;
+                queens = [{
+                    row: i,
+                    column: 0
+                }];
+                postMessage({
+                    size: boardSize,
+                    board: board,
+                    status: 'inProgress'
+                });
+                var foundSolution = findQueenPositionUsingDiagonalAlgorithm(board, i, 1);
+                if (foundSolution) {
+                    console.log('Solution Exist with row position = ' + i);
+                    hasSolution = true;
+                    postMessage({
+                      size: boardSize,
+                      board: board,
+                      status: 'finished',
+                      hasSolution:true
+                  });
+                    break;
+                }
+            }
+
+            if (!hasSolution) {
+                postMessage({
+                    size: boardSize,
+                    board: initializeBoard(boardSize),
+                    status: 'finished',
+                    hasSolution:false
+                });
+                console.log('Solution does not exist with this size = ' + boardSize);
+            }
+
+            /* main code */
+
+            /* queen solver end */
+            /*  self.postMessage('<h3>Worker: Started the calculation</h3><ul>');
+              var n = 1;
+              search: while (n < 500) {
+                  n += 1;
+                  for (var i = 2; i <= Math.sqrt(n); i += 1)
+                      if (n % i == 0) continue search;
+                  // found a prime!
+                  postMessage('<li>Worker: Found another prime: ' + n + '</li>');
+                  setTimeout("postMessage('from log')", 500);
+              }
+              postMessage('</ul><h3>Worker: Done</h3>'); */
+        };
+    </script>
+    <script>
+        // data for saving puzzle data...
+        window.workerData = {}
+
+        function setWorkerOutput(data) {
+            window.workerData = data;
+          // console.log('worker data');
+           // console.log(workerData);
+        }
+
+        // Creating the Blob and adding our Web Worker code to it.
+        var blob = new Blob([document.getElementById('workerCode').textContent], {
+            type: 'application/javascript'
+        });
+
+        // creates a simple URL string which can be used to reference
+        // data stored in a DOM File / Blob object.
+        // Psss... In Chrome, there's a nice page to view all of the
+        // created blob URLs: chrome://blob-internals/
+        //var objUrl = ( window.URL || window.webkitURL);
+        var gameWorker = new Worker(URL.createObjectURL(blob));
+        gameWorker.onmessage = function(e) {
+            // pass the information we got from the worker and print it
+            setWorkerOutput(e.data);
+        };
+        //worker.postMessage("Go"); // Start the worker.
+
+        /*function worker() {
+                    setInterval(function() {
+                    postMessage({foo: "bar"});
+                    }, 1000);
+                    }
+
+                    var code = worker.toString();
+                    code = code.substring(code.indexOf("{")+1, code.lastIndexOf("}"));
+
+                    var blob = new Blob([code], {type: "application/javascript"});
+                    var worker = new Worker(URL.createObjectURL(blob));
+
+                    worker.onmessage = function(m) {
+                    console.log("msg", m);
+                    }; */
+    </script>
+</head>
+
+<body class="app header-fixed sidebar-hidden aside-menu-fixed aside-menu-hidden">
     <div id="root"></div>
     <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+         This HTML file is a template.
+         If you open it directly in the browser, you will see an empty page.
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+         You can add webfonts, meta tags, or analytics to this file.
+         The build step will place the bundled scripts into the <body> tag.
 
-      To begin the development, run `npm start`.
-      To create a production bundle, use `npm run build`.
-    -->
-  </body>
+         To begin the development, run `npm start`.
+         To create a production bundle, use `npm run build`.
+         -->
+</body>
+
 </html>

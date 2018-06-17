@@ -2,11 +2,13 @@ import React, { Component } from 'react';
 import { FormattedMessage, injectIntl } from 'react-intl';
 import HomeHeader from '../../components/Home/HomeHeader.js';
 
-const NO_OF_BOARDS = 30;
+const NO_OF_BOARDS = 50;
+
 class QueenGame extends Component {
   constructor(props) {
     super(props);
     this.queens = [];
+    this.workerUpdateIntervalId = -1;
     this.state = {
       boardSize: 4,
       board: this.initializeBoard(4),
@@ -14,31 +16,177 @@ class QueenGame extends Component {
       gameInProgress: false,
       msg: 'Please click start button to run this program',
       tableKey: Date.now(),
-      queenThreeLine: false
+      queenThreeLine: true,
+      showAnimation: true,
+      windowWidth: window.innerWidth, 
+      windowHeight: window.innerHeight
     };
     this.findQueenPositionUsingDiagonalAlgorithm = this.findQueenPositionUsingDiagonalAlgorithm.bind(
       this
     );
     this.findQueeenPositions = this.findQueeenPositions.bind(this);
     this.applyBoardChanges = this.applyBoardChanges.bind(this);
+    this.startGameUsingWorker = this.startGameUsingWorker.bind(this);
+    this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
   }
 
-  findQueeenPositions() {
-    setTimeout(_ => this.setState({ gameInProgress: true }), 1000 * 0.01);
-    // this.setState({ gameInProgress: true });
-    setTimeout(_ => this.startGame(), 1000 * 0.03);
+  updateWindowDimensions() {
+    this.setState({ width: window.innerWidth, height: window.innerHeight });
+  }
+
+  componentDidMount() {
+    this.updateWindowDimensions();
+    window.addEventListener('resize', this.updateWindowDimensions);
+  }
+  
+  componentWillUnmount() {
+    window.removeEventListener('resize', this.updateWindowDimensions);
+  }
+
+   findQueeenPositions() {
+    let timeoutValue = 1000;
+    if(this.state.boardSize < 15) {
+       timeoutValue = 10;
+    }
+    setTimeout(_ => this.setState({ gameInProgress: true,  board:this.initializeBoard(this.state.boardSize) }), 0);
+    if(!this.state.showAnimation) {
+      setTimeout(_ => this.startGame(), 1000 * 0.03);
+      return true;
+    }
+    let workerStarted = false;
+    try {
+      workerStarted = this.startGameUsingWorker();
+    } catch (e) {
+      console.error(e);
+      workerStarted = false;
+    }
+    if (!workerStarted) {
+      // start the game process in main thread...
+      console.error('Worker failed.., starting program in main thread..');
+      setTimeout(_ => this.startGame(), 1000 * 0.03);
+    } else {
+      this.workerUpdateIntervalId = setInterval(() => {
+       /// console.log('worker update func...');
+        ///console.log(window.workerData);
+        try {
+          if (window && window.workerData) {
+            let data = window.workerData;
+            let size = data && data.size ? data.size : 0;
+            let localBoard = data && data.board ? data.board : undefined;
+            let status = data && data.status ? data.status : undefined;
+            let hasSolution = data && data.hasSolution ? data.hasSolution : undefined;
+            if (status === 'finished') {
+              clearInterval(this.workerUpdateIntervalId);
+              for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                  try {
+                    //const x = localBoard[i].row;
+                    //const y = localBoard[i].column;
+                    if(localBoard[i][j] === 1) {
+                      document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.remove('emptyWhiteCell');
+                    document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.remove('queenCell');
+                    document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.add('queenCell');
+                    } else {
+                      document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.remove('queenCell');
+                      document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.add('emptyWhiteCell');
+                    }
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }
+              }
+              this.setState({
+                gameInProgress: false,
+                board: localBoard,
+                msg: hasSolution === true ? 'We found first workiing set,please check the result..' : 'We could not find the solution with this size, please try again'
+              });
+            } else if (localBoard && status === 'inProgress') {
+              for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                  try {
+                    //const x = localBoard[i].row;
+                    //const y = localBoard[i].column;
+                    if(localBoard[i][j] === 1) {
+                      document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.remove('emptyWhiteCell');
+                    document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.remove('queenCell');
+                    document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.add('queenCell');
+                    } else {
+                      document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.remove('queenCell');
+                      document
+                      .getElementById(`cell_${i}${j}`)
+                      .classList.add('emptyWhiteCell');
+                    }
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }
+              }
+            } else {
+              // we could not find the state so reset everything..
+              clearInterval(this.workerUpdateIntervalId);
+              this.setState({
+                gameInProgress: false,
+                msg: 'There is a problem with your browser worker'
+              });
+            }
+          } else {
+            console.error('no worker data ');
+            clearInterval(this.workerUpdateIntervalId);
+            this.setState({
+              gameInProgress: false,
+              msg: "Your Browser does not support worker so please 'Please remove show animation option' "
+            });
+          }
+        } catch (e) {}
+      }, timeoutValue);
+    }
+
+    return Promise.resolve(true);
   }
 
   angle = (anchor, point) =>
     Math.atan2(anchor.y - point.y, anchor.x - point.x) * 180 / Math.PI + 180;
 
   handleThreeLineQueenCheck = ev => {
-    this.setState({ queenThreeLine: ev.target.checked });
+    this.setState({ queenThreeLine: this.state.showAnimation === true ? true: ev.target.checked });
+  };
+
+  handleAnimationCheck = ev => {
+    console.log('animation');
+    this.setState({ showAnimation: ev.target.checked,  queenThreeLine: ev.target.checked === true ? true: this.state.queenThreeLine});
   };
 
   applyBoardChanges(board) {
     this.setState({ board, tableKey: Date.now() });
     //this.forceUpdate();
+  }
+
+  async startGameUsingWorker() {
+    if (window && window.gameWorker) {
+      window.gameWorker.postMessage({ size: this.state.boardSize });
+      return true;
+    } else {
+      console.log('no window.gameWorker');
+      return false;
+    }
   }
 
   startGame() {
@@ -79,23 +227,6 @@ class QueenGame extends Component {
 
   findQueenPositionUsingDiagonalAlgorithm(board, rowRef, colRef) {
     try {
-      /*  algorithm
-       * 
-       *  1. Keep queen in one initial position.
-       *  
-       *  2. Set that initial queen row as base and do iterations after finding the element which are available for next safe location..
-       *  
-       *  3. find the next position using diagonal algorithm
-       *  
-       *   initilal position: 00, then next position would be row = (row+2, row+3, etc or row-2, row -3, etc, column = column +1, then set new position as new base and continue till we reach a solution or 
-       *  no slution criteria. 
-       *  
-       *  
-       *  
-       *  
-      /*
-       * If all queens are placed then return true
-       */
       if (colRef >= this.state.boardSize) {
         return true;
         //return true;
@@ -128,83 +259,24 @@ class QueenGame extends Component {
           rowPosition
         );
         if (itemSatify) {
-          /* console.log(
-            '**** this position is safe, continue to next backtrack = ' +
-              '[' +
-              rowPosition +
-              ']' +
-              '[' +
-              colRef +
-              ']'
-          ); */
-          // continue backtracking, after setting safe position...
           board[rowPosition][colRef] = 1;
-          try {
-            document
-              .getElementById(`cell_${rowPosition}${colRef}`)
-              .classList.remove('emptyWhiteCell');
-            document
-              .getElementById(`cell_${rowPosition}${colRef}`)
-              .classList.add('queenCell');
-            console.log(
-              document.getElementById(`cell_${rowPosition}${colRef}`).classList
-            );
-          } catch (e) {}
-          //this.setState({board, tableKey: Date.now()});
-          //this.applyBoardChanges([...board]);
-          //setTimeout(_ => this.setState({board, tableKey: Date.now()}), 1000 * 1);
-          // setTimeout(_ => this.applyBoardChanges([...board]), 1000 * 1);
           this.queens = [...this.queens, { row: rowPosition, column: colRef }];
-          // queenPositions.add(new QueenPosition(avaialbleRows.get(i), colRef));
           const nextIteration = this.findQueenPositionUsingDiagonalAlgorithm(
             board,
             rowPosition,
             colRef + 1
           );
           if (nextIteration) {
-            /* console.log(
-              '**** this position is safe return true= ' +
-                '[' +
-                rowPosition +
-                ']' +
-                '[' +
-                colRef +
-                ']'
-            ); */
-            // printBoard(board);
             return true;
           } else {
-            /* console.log(
-              '**** this position is not safe reset board = ' +
-                '[' +
-                rowPosition +
-                ']' +
-                '[' +
-                colRef +
-                ']'
-            ); */
             board[rowPosition][colRef] = 0;
-            try {
-              document
-                .getElementById(`cell_${rowPosition}${colRef}`)
-                .classList.remove('queenCell');
-              document
-                .getElementById(`cell_${rowPosition}${colRef}`)
-                .classList.add('emptyWhiteCell');
-            } catch (e) {}
-            // this.setState({board, tableKey: Date.now()});
-            // setTimeout(_ => this.setState({board, tableKey: Date.now()}),
-            //1000 * 3);
             const removedQueens = this.queens.filter(queen => {
               return queen.row !== rowPosition && queen.column !== colRef;
             });
             this.queens = [...removedQueens];
-            //  queenPositions.remove(new QueenPosition(avaialbleRows.get(i), colRef));
-            //printBoard(board);
           }
         }
       }
-      // no postion is fit in the column... so change the row sequence...
       return false;
     } catch (e) {
       console.log('**** Error : findQueenPosition = ');
@@ -221,21 +293,8 @@ class QueenGame extends Component {
    */
   isItemSatisfyProgramRule(board, colPos, rowPos) {
     try {
-      /*
-     * rule no: 1--> only one queen in the row..
-     * 
-     * rule no: 2--> only one queen in the column...
-     */
       for (let i = 0; i < this.state.boardSize; i++) {
         if (board[i][colPos] === 1 || board[rowPos][i] === 1) {
-          /*console.log(
-            '**** failed position  : row = ' +
-              rowPos +
-              ' , column = ' +
-              colPos +
-              ' , position =  ' +
-              i
-          ); */
           return false;
         }
       }
@@ -294,21 +353,8 @@ class QueenGame extends Component {
         x - row === 0
           ? Number.MAX_VALUE
           : this.angle({ x, y }, { x: row, y: col });
-      // let slope =(this.queens[i].row - row === 0) ? Number.MAX_VALUE:
-      // 0.0 + parseFloat((this.queens[i].column - col) / (this.queens[i].row - row));
-      //System.out.println("**** Slope, point = "+ queenPos.toString() + " and poition [" + row + "]["+ col + "]");
 
-      // System.out.println("**** slopes values = "+ slopes);
-
-      //Double slope = (queenPos.row - row) == 0
-      //   ? Integer.MAX_VALUE
-      //  : Double.valueOf((double) (queenPos.column - col) / (double) (queenPos.row - row));
-      //console.log('slopes')
-      // console.log(slopes);
       if (slopes.has(slope)) {
-        //console.log('slope ****')
-        //console.log(slope);
-        // console.log("**** 3 points = "+ x+", "+ y + " and poition [" + row + "]["+ col + "]");
         return true;
       }
       slopes.add(slope);
@@ -346,20 +392,50 @@ class QueenGame extends Component {
     //console.log("board");
     //console.log(this.state.board);
     const boardLocal = this.state.board;
+   // console.log(boardLocal);
     const count = this.state.boardSize;
-    const size = Math.floor(400 / count);
+    const size = Math.floor((100) / count);
+    let heightSize = Math.floor((200) / count);
+    const widthSize = Math.floor((300) / count);
+    let columnStyle =  {
+      width: `${size}%`,
+      alignItems: 'center',
+      borderStyle: 'ridge'
+    }
+    if(this.state.windowWidth > 350 && count < 11) {
+      columnStyle =  {
+        width: `30px`,
+        height: '30px',
+        alignItems: 'center',
+        borderStyle: 'ridge'
+      }
+    } else if(this.state.windowWidth < 350 && count < 11) {
+      columnStyle =  {
+        width: `20px`,
+        height: '20px',
+        alignItems: 'center',
+        borderStyle: 'ridge'
+      }
+    } else if(this.state.windowWidth > 350 && count < 14) {
+      columnStyle =  {
+        width: `30px`,
+        height: '30px',
+        alignItems: 'center',
+        borderStyle: 'ridge'
+      }
+    }
     for (let i = 0; i < count; i++) {
       let columns = [];
       for (let j = 0; j < count; j++) {
         columns.push(
-          <td
+         /* <td
             key={`${i}${j}`}
             id={`cell_${i}${j}`}
-            style={{
-              width: `${size}px`,
-              height: `${size}px`
-            }}
             className={boardLocal[i][j] === 1 ? 'queenCell' : 'emptyWhiteCell'}
+            style={{
+              width: `${size}%`,
+              height: `${heightSize}px`
+            }}
           >
             <div style={{ alignItems: 'center' }}>
               <span>
@@ -370,25 +446,52 @@ class QueenGame extends Component {
                 )}
               </span>
             </div>
-          </td>
-        );
+          </td> */
+          <div key={`${i}${j}`}
+          id={`cell_${i}${j}`} 
+          style={columnStyle}
+          className={boardLocal[i][j] === 1 ? 'queenCell' : 'emptyWhiteCell'}>
+          <span>
+            {boardLocal[i][j] === 1 ? (
+              <i className="fa fa-check" />
+            ) : (
+              <i className="fa fa-ban" />
+            )}
+          </span>
+        </div>
+        ); 
         cellCount++;
       }
       rows.push(
-        <tr key={`${i}`} style={{ backgroundColor: 'white' }}>
+       /* <tr key={`${i}`} style={{ backgroundColor: 'white' }}>
           {columns}
-        </tr>
+        </tr> */
+        <div key={`${i}`} className="row">
+          {columns}
+        </div>
       );
     }
 
     return (
-      <table
-        className="table table-bordered "
-        style={{ width: '400', height: '400' }}
+
+      <div className="justify-content-cente" 
+      style={{
+        width: `95%`,
+        height: `60%`,
+        maxWidth: '95%',
+        alignItems: 'center'
+      }}>
+          {rows}
+      </div>
+
+
+     /* <table
+        className="table table-bordered"
         key={this.state.tableKey}
+        style={{ width: '70%', height: '80%' }}
       >
         <tbody>{rows}</tbody>
-      </table>
+      </table> */
     );
   }
 
@@ -440,20 +543,6 @@ class QueenGame extends Component {
     );
   }
 
-  applyAnimationToRow(ev, elementName, startValue, endValue) {
-    let childsNodes = document.getElementById(elementName).childNodes;
-    for (let i = startValue; i >= endValue; i--) {
-      try {
-        if (
-          childsNodes[i].children[0].classList.value === 'circle circle-fill'
-        ) {
-        } else {
-          childsNodes[i].children[0].classList.add('circle', 'circle-fill');
-        }
-      } catch (e) {}
-    }
-  }
-
   render() {
     let msg = this.state.msg;
     if (this.state.gameInProgress) {
@@ -473,10 +562,10 @@ class QueenGame extends Component {
             </div>
             <div className="card-block">
               <div className="form-group row">
-                <div className="col-md-3 col-sm-3">
+                <div className="col-md-2 col-sm-3">
                   <span>Select board size</span>
                 </div>
-                <div className="col-md-3 col-sm-4">
+                <div className="col-md-2 col-sm-3">
                   <select
                     id="coffeCupListSelect"
                     name="coffeCupListSelect"
@@ -490,13 +579,32 @@ class QueenGame extends Component {
                     {this.renderBoardOptions()}
                   </select>
                 </div>
-                <div className="col-sm-3">{this.renderStartBtn()}</div>
+                <div className="col-md-2 col-sm-2 justify-content-center">{this.renderStartBtn()}
+                {'   '}
+                </div>
+                <div className="col-md-2 col-sm-2 justify-content-center">
+                <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      this.resetGame();
+                    }}
+                    disabled={this.state.gameInProgress}
+                  >
+                   {'   '} Reset
+                  </button>
+                </div>
               </div>
               <hr />
-              <div className="form-group row" />
+              <div className="col-xl-9 col-md-9 col-sm-9 justify-content-center">
+                <div className="row justify-content-center">
+                  {this.renderQueenBoard()}
+                </div>
+              </div>
+              <hr />
               <div className="form-group row">
                 <div className="col-sm-4 col-md-4">
-                  <label className="col-md-2 col-sm-2 form-control-label justify-content-center">
+                  <label className="form-control-label justify-content-center">
                     <FormattedMessage id="RESULT" />
                   </label>
                   <span>{'  '}</span>
@@ -507,40 +615,36 @@ class QueenGame extends Component {
                   </label>
                 </div>
               </div>
+              <hr />
               <div className="form-group row">
-                <div className="col-sm-4 col-md-4">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => {
-                      this.resetGame();
-                    }}
-                  >
-                    Reset
-                  </button>
+              <div className="col-sm-4 col-md-4">
+                  <label className="form-control-label justify-content-center">
+                   Program options: 
+                  </label>
                   <span>{'  '}</span>
                 </div>
-                <div className="col-sm-4 col-md-4">
-                  <div className="row">
-                    <input
+                <div className="col-sm-3 col-md-2">
+                <div>
+                <input
+                      type="checkbox"
+                      onChange={this.handleAnimationCheck}
+                      checked={this.state.showAnimation}
+                    />
+                    <span> {' '}Show animation </span>
+                  </div>
+                </div>
+                <div className="col-sm-3 col-md-2">
+                <div>
+                <input
                       type="checkbox"
                       onChange={this.handleThreeLineQueenCheck}
-                      defaultChecked={this.state.queenThreeLine}
+                      checked={this.state.queenThreeLine}
                     />
-                    <label className="cform-control-label justify-content-center">
-                      {
-                        ' Should not show 3 queens in one straight line. Please select lower values if you are selecting this option'
-                      }
-                    </label>
+                    <span> {' '} Do not show 3 Queens in one line </span>
                   </div>
                 </div>
               </div>
               <hr />
-              <div className="col-xl-9 col-md-9 col-sm-9 justify-content-center">
-                <div className="row justify-content-center">
-                  {this.renderQueenBoard()}
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -550,3 +654,4 @@ class QueenGame extends Component {
 }
 
 export default injectIntl(QueenGame);
+
